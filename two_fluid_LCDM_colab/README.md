@@ -84,3 +84,6 @@ plot_power_spectrum(theta, data=None)
 ```
 
 No sampler driver is included in this package.
+
+For a map from the main equations to the corresponding C++ line numbers, see
+`equations_explanatory.md`.
