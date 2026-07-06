@@ -4,4 +4,4 @@
 
 [Open Notebook 3 in Colab](https://colab.research.google.com/github/tsmith2/GGI_cosmology_notebooks/blob/main/class_so_lcdm_r_fisher_colab_GGI.ipynb)
 
-[Open Notebook 3 in Colab](https://colab.research.google.com/github/tsmith2/GGI_cosmology_notebooks/blob/main/two_fluid_LCDM_colab_student_notebook.ipynb)
+[Open Notebook 4 in Colab](https://colab.research.google.com/github/tsmith2/GGI_cosmology_notebooks/blob/main/two_fluid_LCDM_colab_student_notebook.ipynb)
