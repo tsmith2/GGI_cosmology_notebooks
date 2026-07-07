@@ -93,7 +93,7 @@ f_sky = 0.70
 The student-facing wrapper is:
 
 ```text
-python/simplified_cmb_lite_colab.py
+python/simplified_CMB_lite_colab.py
 ```
 
 The core likelihood call is:
