@@ -101,8 +101,7 @@ where:
 theta = [log10(10^9 A_s), omega_cdm, omega_b, H0, n_s]
 ```
 
-Here `H0` is in km/s/Mpc.  The C++ solver internally uses `h = H0/100`, but
-students only need to pass `H0` to the Python wrapper.
+Here `H0` is in km/s/Mpc.
 
 The Colab notebook is:
 

@@ -5,8 +5,8 @@ Model parameter vector:
 
     theta = [log10(10^9 A_s), omega_cdm, omega_b, H0, n_s]
 
-where H0 is in km/s/Mpc, and omega_cdm and omega_b are physical densities,
-Omega_i h^2.  The likelihood functions also accept ell_min and ell_max, with
+where H0 is in km/s/Mpc, and omega_cdm and omega_b are the usual physical
+density parameters.  The likelihood functions also accept ell_min and ell_max, with
 defaults ell_min=2 and ell_max=2500.
 """
 
@@ -81,14 +81,17 @@ def As_from_log10_1e9_As(log10_1e9_As: float) -> float:
     return 10.0 ** float(log10_1e9_As) * 1.0e-9
 
 
-def _theta_with_cpp_h(theta: np.ndarray) -> np.ndarray:
-    """Return a copy of theta with H0 converted to h for the C++ executable."""
+def _validate_theta(theta: np.ndarray) -> np.ndarray:
+    """Return theta as a float array after checking the H0 convention."""
     theta = np.asarray(theta, dtype=float)
     if theta.shape != (len(FID_THETA),):
         raise ValueError("theta must have five entries")
-    out = theta.copy()
-    out[3] = out[3] / 100.0
-    return out
+    if not np.isfinite(theta[3]) or theta[3] < 10.0:
+        raise ValueError(
+            "theta[3] must be H0 in km/s/Mpc, for example 67.0. "
+            "Do not pass 0.67 here."
+        )
+    return theta.copy()
 
 
 def ensure_cpp_executable(*, force_rebuild: bool = False) -> None:
@@ -186,7 +189,7 @@ class TwoFluidCPPServer:
         A_s: float,
         omega_cdm: float,
         omega_b: float,
-        h: float,
+        H0: float,
         n_s: float,
     ) -> TTSpectrum:
         """Return the dense TT spectrum in microkelvin squared."""
@@ -196,7 +199,7 @@ class TwoFluidCPPServer:
         assert self.process.stdout is not None
 
         line = " ".join(
-            f"{float(x):.17g}" for x in [A_s, omega_cdm, omega_b, h, n_s]
+            f"{float(x):.17g}" for x in [A_s, omega_cdm, omega_b, H0, n_s]
         )
         self.process.stdin.write(line + "\n")
         self.process.stdin.flush()
@@ -321,12 +324,12 @@ def _full_tt_spectrum(
     *,
     ell_max: int = ELL_MAX,
 ) -> TTSpectrum:
-    log_as, omega_cdm, omega_b, h, n_s = map(float, _theta_with_cpp_h(theta))
+    log_as, omega_cdm, omega_b, H0, n_s = map(float, _validate_theta(theta))
     return get_server(ell_max=ell_max).tt_spectrum(
         A_s=As_from_log10_1e9_As(log_as),
         omega_cdm=omega_cdm,
         omega_b=omega_b,
-        h=h,
+        H0=H0,
         n_s=n_s,
     )
 

@@ -1374,7 +1374,7 @@ Params parse_args(int argc, char **argv) {
     if (key == "--As") p.As = std::stod(need_value(key));
     else if (key == "--omega-cdm") p.omega_cdm_h2 = std::stod(need_value(key));
     else if (key == "--omega-b") p.omega_b_h2 = std::stod(need_value(key));
-    else if (key == "--h") p.h = std::stod(need_value(key));
+    else if (key == "--H0") p.h = std::stod(need_value(key)) / 100.0;
     else if (key == "--ns") p.ns = std::stod(need_value(key));
     else if (key == "--n-source") p.n_source = std::stoi(need_value(key));
     else if (key == "--ell-grid") p.ell_grid = need_value(key);
@@ -1405,7 +1405,7 @@ Params parse_args(int argc, char **argv) {
     else if (key == "--helium-y-p") p.helium_y_p = std::stod(need_value(key));
     else if (key == "--help") {
       std::cout << "Usage: two_fluid_tt_scalar [--As val] [--omega-cdm val] [--omega-b val]\n"
-                   "                    [--h val] [--ns val] [--n-source N]\n"
+                   "                    [--H0 val] [--ns val] [--n-source N]\n"
                    "                    [--ell-grid sparse|class]\n"
                    "                    [--ell-min L] [--ell-max L] [--ell-step N]\n"
                    "                    [--interpolated-output|--sampled-output]\n"
@@ -1503,11 +1503,13 @@ void run_server(const Params &base) {
 
     std::istringstream in(line);
     Params p = base;
-    in >> p.As >> p.omega_cdm_h2 >> p.omega_b_h2 >> p.h >> p.ns;
+    double H0_input = 0.0;
+    in >> p.As >> p.omega_cdm_h2 >> p.omega_b_h2 >> H0_input >> p.ns;
     if (!in) {
       std::cout << "ERR bad_parameter_line\n" << std::flush;
       continue;
     }
+    p.h = H0_input / 100.0;
 
     try {
       TwoFluidModel model(p);
