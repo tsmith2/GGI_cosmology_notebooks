@@ -7,3 +7,5 @@
 [Open Notebook 4 in Colab](https://colab.research.google.com/github/tsmith2/GGI_cosmology_notebooks/blob/main/class_mode_evolution_colab.ipynb)
 
 [Open Notebook 5 in Colab](https://colab.research.google.com/github/tsmith2/GGI_cosmology_notebooks/blob/main/simplified_CMB_colab.ipynb)
+
+[Open Simplified_CMB_lite in Colab](https://colab.research.google.com/github/tsmith2/GGI_cosmology_notebooks/blob/main/simplified_CMB_lite_colab.ipynb)
