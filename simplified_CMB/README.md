@@ -21,6 +21,20 @@ cd cpp
 make
 ```
 
+Remove a compiled binary:
+
+```bash
+make clean
+```
+
+This also removes generated Bessel cache files in `cpp/` and `.cache/`.
+
+Clean and rebuild from source:
+
+```bash
+make rebuild
+```
+
 Run a small smoke spectrum:
 
 ```bash

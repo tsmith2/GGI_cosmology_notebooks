@@ -39,6 +39,7 @@ ISW_K_ETA0_MAX = 900.0
 K_SAMPLES_PER_PERIOD = 40.0
 
 FID_THETA = np.array([np.log10(2.1), 0.1201, 0.0223, 0.67, 0.965], dtype=float)
+_BUILT_CPP = False
 
 
 @dataclass(frozen=True)
@@ -55,10 +56,17 @@ def As_from_log10_1e9_As(log10_1e9_As: float) -> float:
 
 
 def ensure_cpp_executable() -> None:
-    """Build the C++ solver if needed."""
-    if EXE.exists():
+    """Build the C++ solver for the current machine.
+
+    The repository should not rely on a precompiled executable.  In particular,
+    a Mac binary copied into GitHub will fail in Colab with "Exec format error",
+    so we force one clean rebuild per Python session.
+    """
+    global _BUILT_CPP
+    if _BUILT_CPP:
         return
-    subprocess.run(["make"], cwd=CPP_DIR, check=True)
+    subprocess.run(["make", "rebuild"], cwd=CPP_DIR, check=True)
+    _BUILT_CPP = True
 
 
 class TwoFluidCPPServer:
