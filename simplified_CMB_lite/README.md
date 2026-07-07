@@ -98,7 +98,7 @@ negative_log_likelihood(theta, data=None, ell_min=2, ell_max=2500)
 where:
 
 ```python
-theta = [log10(10^9 A_s), omega_cdm, omega_b, H0, n_s]
+theta = [A_s, omega_cdm, omega_b, H0, n_s]
 ```
 
 Here `H0` is in km/s/Mpc.

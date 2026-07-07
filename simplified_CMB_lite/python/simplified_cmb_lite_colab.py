@@ -3,7 +3,7 @@
 
 Model parameter vector:
 
-    theta = [log10(10^9 A_s), omega_cdm, omega_b, H0, n_s]
+    theta = [A_s, omega_cdm, omega_b, H0, n_s]
 
 where H0 is in km/s/Mpc, and omega_cdm and omega_b are the usual physical
 density parameters.  The likelihood functions also accept ell_min and ell_max, with
@@ -40,17 +40,17 @@ import matplotlib.pyplot as plt
 
 
 PARAM_NAMES = [
-    r"$\log_{10}(10^9 A_s)$",
+    r"$A_s$",
     r"$\omega_{\rm cdm}$",
     r"$\omega_b$",
     r"$H_0$",
     r"$n_s$",
 ]
 
-FID_THETA = np.array([np.log10(2.1), 0.1201, 0.0223, 67.0, 0.965], dtype=float)
+FID_THETA = np.array([2.1e-9, 0.1201, 0.0223, 67.0, 0.965], dtype=float)
 LCDM_BOUNDS = np.array(
     [
-        [-0.2, 0.8],
+        [1.0e-9, 3.5e-9],
         [0.09, 0.16],
         [0.017, 0.028],
         [55.0, 80.0],
@@ -74,11 +74,6 @@ class TTSpectrum:
     ell: np.ndarray
     cl: np.ndarray
     dell_over_2pi: np.ndarray
-
-
-def As_from_log10_1e9_As(log10_1e9_As: float) -> float:
-    """Convert log10(10^9 A_s) into A_s."""
-    return 10.0 ** float(log10_1e9_As) * 1.0e-9
 
 
 def _validate_theta(theta: np.ndarray) -> np.ndarray:
@@ -324,9 +319,9 @@ def _full_tt_spectrum(
     *,
     ell_max: int = ELL_MAX,
 ) -> TTSpectrum:
-    log_as, omega_cdm, omega_b, H0, n_s = map(float, _validate_theta(theta))
+    A_s, omega_cdm, omega_b, H0, n_s = map(float, _validate_theta(theta))
     return get_server(ell_max=ell_max).tt_spectrum(
-        A_s=As_from_log10_1e9_As(log_as),
+        A_s=A_s,
         omega_cdm=omega_cdm,
         omega_b=omega_b,
         H0=H0,
