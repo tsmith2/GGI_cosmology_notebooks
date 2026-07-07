@@ -1,0 +1,33 @@
+# simplified_CMB
+
+This is a simplified RECFAST-enabled CMB temperature solver using photon-CDM
+theta-variable perturbation equations.  Baryon density perturbations are kept
+in the gravitational source, but are not independently evolved:
+
+```math
+\delta_b = {3\over 4}\delta_\gamma .
+```
+
+This is approximately true during tight coupling.  The included compact
+RECFAST-style module computes the recombination history.  The CMB temperature
+projection still assumes instantaneous recombination, but the code now uses
+RECFAST to compute `z_star`, the finite-width damping scale, and the Silk
+damping scale.
+
+Build:
+
+```bash
+cd cpp
+make
+```
+
+Run a small smoke spectrum:
+
+```bash
+cpp/two_fluid_tt --recfast-output recfast_history.dat \
+  --ell-grid sparse --ell-min 2 --ell-max 800 --ell-step 5 \
+  --bessel-class-memory --output smoke_tt.dat
+```
+
+See `explanatory.md` for the physical equations and corresponding C++ line
+numbers.
