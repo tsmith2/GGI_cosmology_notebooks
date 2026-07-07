@@ -1,0 +1,8 @@
+cpp/two_fluid_tt
+python/__pycache__/
+.cache/
+.mplconfig/
+data/
+plots/
+figures/
+*.dat
