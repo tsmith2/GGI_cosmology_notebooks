@@ -4,6 +4,13 @@ This is a stripped-down RECFAST-enabled CMB temperature solver intended for
 fast experiments.  It removes the ISW line-of-sight integral and computes only
 the instantaneous last-scattering Sachs-Wolfe plus Doppler TT spectrum.
 
+This version includes a minimally coupled perfect-fluid neutrino/radiation
+component.  The command-line and likelihood parameter is `Delta_N_eff`, with
+
+```math
+N_{\rm eff}=3+\Delta N_{\rm eff}.
+```
+
 Baryon density perturbations are kept in the gravitational source, but are not
 independently evolved:
 
@@ -69,7 +76,7 @@ The package includes Planck-like mock TT data generated from the fiducial lite
 spectrum:
 
 ```text
-data/mock_tt_planck_like_lite.npz
+data/mock_tt_planck_like_lite_neutrino.npz
 data/planck_tt_binning_lmax2500.npz
 ```
 
@@ -86,7 +93,7 @@ f_sky = 0.70
 The student-facing wrapper is:
 
 ```text
-python/simplified_cmb_lite_colab.py
+python/simplified_CMB_lite_colab.py
 ```
 
 The core likelihood call is:
@@ -98,10 +105,11 @@ negative_log_likelihood(theta, data=None, ell_min=2, ell_max=2500)
 where:
 
 ```python
-theta = [A_s, omega_cdm, omega_b, H0, n_s]
+theta = [A_s, omega_cdm, omega_b, H0, n_s, Delta_N_eff]
 ```
 
-Here `H0` is in km/s/Mpc.
+Here `H0` is in km/s/Mpc and `Delta_N_eff=0` corresponds to the default
+three-neutrino model.
 
 The Colab notebook is:
 

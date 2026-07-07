@@ -31,6 +31,7 @@ struct Params {
   double omega_b_h2 = 0.0223;
   double h = 0.67;
   double ns = FID_NS;
+  double delta_neff = 0.0;
   int n_source = 1001;
   int ell_min = -1;
   int ell_max = -1;
@@ -63,15 +64,17 @@ struct Background {
   explicit Background(const Params &p)
       : h0(p.h), H0(100.0 * p.h / C_LIGHT_KM_S),
         omega_gamma(2.47e-5 / (p.h * p.h)),
+        omega_nu(0.22710731766 * std::max(0.0, 3.0 + p.delta_neff) *
+                 omega_gamma),
         omega_cdm(p.omega_cdm_h2 / (p.h * p.h)),
         omega_b(p.omega_b_h2 / (p.h * p.h)) {
-    omega_rad = omega_gamma;
+    omega_rad = omega_gamma + omega_nu;
     omega_m = omega_cdm + omega_b;
     omega_lambda = 1.0 - (omega_cdm + omega_b + omega_rad);
   }
 
   double h0, H0;
-  double omega_gamma, omega_rad;
+  double omega_gamma, omega_nu, omega_rad;
   double omega_cdm, omega_b, omega_m, omega_lambda;
 };
 
@@ -127,7 +130,7 @@ RecfastHistory compute_recfast_history(const Params &p, const Background &bg) {
 
   auto H_si = [&](double z) {
     const double zp1 = 1.0 + z;
-    return H0_si * std::sqrt(bg.omega_gamma * std::pow(zp1, 4) +
+    return H0_si * std::sqrt(bg.omega_rad * std::pow(zp1, 4) +
                              bg.omega_m * std::pow(zp1, 3) +
                              bg.omega_lambda);
   };
@@ -135,7 +138,7 @@ RecfastHistory compute_recfast_history(const Params &p, const Background &bg) {
     const double zp1 = 1.0 + z;
     const double Hz = H_si(z);
     return (H0_si * H0_si / (2.0 * Hz)) *
-           (4.0 * bg.omega_gamma * std::pow(zp1, 3) +
+           (4.0 * bg.omega_rad * std::pow(zp1, 3) +
             3.0 * bg.omega_m * zp1 * zp1);
   };
   auto saha_xe = [&](double z) {
@@ -228,7 +231,7 @@ RecfastHistory compute_recfast_history(const Params &p, const Background &bg) {
 }
 // >>>>>>>>>>>>>>>>>>>>>>> END RECFAST RECOMBINATION <<<<<<<<<<<<<<<<<<<<<<<
 
-constexpr int STATE_SIZE = 5;
+constexpr int STATE_SIZE = 7;
 using State = std::array<double, STATE_SIZE>;
 
 [[maybe_unused]] double simpson_integral(const Background &bg, double amax,
@@ -479,7 +482,7 @@ class TwoFluidModel {
     have_recfast_history = true;
     recombination_scales = compute_recombination_scales_from_recfast();
     arec = 1.0 / (1.0 + recombination_scales.z_star);
-    aeq = bg.omega_gamma / bg.omega_m;
+    aeq = bg.omega_rad / bg.omega_m;
     etatoday = bgsol.eta_of_a(1.0);
     etarec = recombination_scales.eta_star;
     etastar = etarec;
@@ -505,7 +508,7 @@ class TwoFluidModel {
   }
 
   void write_scale_summary(std::ostream &out) const {
-    const double H_eq = bg.H0 * std::sqrt(bg.omega_gamma / std::pow(aeq, 4) +
+    const double H_eq = bg.H0 * std::sqrt(bg.omega_rad / std::pow(aeq, 4) +
                                           bg.omega_m / std::pow(aeq, 3) +
                                           bg.omega_lambda);
     const double k_eq = aeq * H_eq;
@@ -741,19 +744,23 @@ class TwoFluidModel {
     const double theta_gammab = u[2];
     const double theta_c = u[3];
     const double phi = u[4];
+    const double delta_nu = u[5];
+    const double theta_nu = u[6];
     // This is approximately true during tight coupling.
     const double delta_b = 0.75 * delta_gamma;
     const double a = bgsol.a_of_eta(eta);
     const double rho_gamma = bg.omega_gamma / (a * a * a * a);
+    const double rho_nu = bg.omega_nu / (a * a * a * a);
     const double rho_b = bg.omega_b / (a * a * a);
     const double rho_c = bg.omega_cdm / (a * a * a);
     const double rho_lambda = bg.omega_lambda;
-    const double rho_tot = rho_gamma + rho_b + rho_c + rho_lambda;
+    const double rho_tot = rho_gamma + rho_nu + rho_b + rho_c + rho_lambda;
     const double H_of_a = bg.H0 * std::sqrt(rho_tot);
     const double Hconf = a * H_of_a;
     const double R = (4.0 / 3.0) * rho_gamma / rho_b;
     const double delta_tot =
-        (rho_gamma * delta_gamma + rho_b * delta_b + rho_c * delta_c) /
+        (rho_gamma * delta_gamma + rho_nu * delta_nu + rho_b * delta_b +
+         rho_c * delta_c) /
         rho_tot;
     const double phi_p =
         (-k * k * phi - 1.5 * Hconf * Hconf * delta_tot) /
@@ -766,6 +773,8 @@ class TwoFluidModel {
             k * k * phi + 0.25 * R * k * k * delta_gamma / (1.0 + R);
     du[3] = -Hconf * theta_c + k * k * phi;
     du[4] = phi_p;
+    du[5] = -(4.0 / 3.0) * theta_nu + 4.0 * phi_p;
+    du[6] = k * k * phi + 0.25 * k * k * delta_nu;
     return du;
   }
 
@@ -775,7 +784,7 @@ class TwoFluidModel {
     const double dg_i = -2.0 * phi_i;
     const double dc_i = 0.75 * dg_i;
     const double theta_i = 0.5 * eta_i * k * k * phi_i;
-    return {eta_i, State{dg_i, dc_i, theta_i, theta_i, phi_i}};
+    return {eta_i, State{dg_i, dc_i, theta_i, theta_i, phi_i, dg_i, theta_i}};
   }
 
   State rk45_step(double eta, const State &u, double h, double k,
@@ -1376,6 +1385,9 @@ Params parse_args(int argc, char **argv) {
     else if (key == "--omega-b") p.omega_b_h2 = std::stod(need_value(key));
     else if (key == "--H0") p.h = std::stod(need_value(key)) / 100.0;
     else if (key == "--ns") p.ns = std::stod(need_value(key));
+    else if (key == "--Delta-Neff" || key == "--delta-neff") {
+      p.delta_neff = std::stod(need_value(key));
+    }
     else if (key == "--n-source") p.n_source = std::stoi(need_value(key));
     else if (key == "--ell-grid") p.ell_grid = need_value(key);
     else if (key == "--ell-min") p.ell_min = std::stoi(need_value(key));
@@ -1404,8 +1416,9 @@ Params parse_args(int argc, char **argv) {
     else if (key == "--recfast-steps") p.recfast_steps = std::stoi(need_value(key));
     else if (key == "--helium-y-p") p.helium_y_p = std::stod(need_value(key));
     else if (key == "--help") {
-      std::cout << "Usage: two_fluid_tt_scalar [--As val] [--omega-cdm val] [--omega-b val]\n"
-                   "                    [--H0 val] [--ns val] [--n-source N]\n"
+      std::cout << "Usage: two_fluid_tt [--As val] [--omega-cdm val] [--omega-b val]\n"
+                   "                    [--H0 val] [--ns val] [--Delta-Neff val]\n"
+                   "                    [--n-source N]\n"
                    "                    [--ell-grid sparse|class]\n"
                    "                    [--ell-min L] [--ell-max L] [--ell-step N]\n"
                    "                    [--interpolated-output|--sampled-output]\n"
@@ -1437,6 +1450,9 @@ Params parse_args(int argc, char **argv) {
     throw std::runtime_error("--k-samples-per-period must be positive");
   }
   if (p.n_threads < 0) throw std::runtime_error("--n-threads must be non-negative");
+  if (3.0 + p.delta_neff < 0.0) {
+    throw std::runtime_error("N_eff = 3 + Delta_N_eff must be non-negative");
+  }
   if (p.recfast_steps < 200) throw std::runtime_error("--recfast-steps must be at least 200");
   if (p.helium_y_p < 0.0 || p.helium_y_p > 0.5) {
     throw std::runtime_error("--helium-y-p must be between 0 and 0.5");
@@ -1504,7 +1520,8 @@ void run_server(const Params &base) {
     std::istringstream in(line);
     Params p = base;
     double H0_input = 0.0;
-    in >> p.As >> p.omega_cdm_h2 >> p.omega_b_h2 >> H0_input >> p.ns;
+    in >> p.As >> p.omega_cdm_h2 >> p.omega_b_h2 >> H0_input >> p.ns >>
+        p.delta_neff;
     if (!in) {
       std::cout << "ERR bad_parameter_line\n" << std::flush;
       continue;

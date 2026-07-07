@@ -7,20 +7,26 @@ Sachs-Wolfe and Doppler sources.
 
 ## Background
 
-The code evolves the scale factor in conformal time:
+The code evolves the scale factor in conformal time, including perfect-fluid
+neutrinos with \(N_{\rm eff}=3+\Delta N_{\rm eff}\):
 
 ```math
 a'(\eta) =
 a^2 H_0
 \left[
-\Omega_m a^{-3} + \Omega_\gamma a^{-4} + \Omega_\Lambda
+\Omega_m a^{-3} + \Omega_r a^{-4} + \Omega_\Lambda
 \right]^{1/2}.
+```
+
+```math
+\Omega_r=\Omega_\gamma+\Omega_\nu,\qquad
+\Omega_\nu = 0.22710731766\,N_{\rm eff}\,\Omega_\gamma .
 ```
 
 The model is spatially flat:
 
 ```math
-\Omega_\Lambda = 1 - \Omega_m - \Omega_\gamma .
+\Omega_\Lambda = 1 - \Omega_m - \Omega_r .
 ```
 
 Implementation: see `background_rhs`, `compute_background_solution`, and
@@ -50,7 +56,8 @@ Implementation: see `compute_recfast_history` and
 The dynamical variables are
 
 ```math
-\left(\delta_\gamma,\delta_c,\theta_{\gamma b},\theta_c,\Phi\right).
+\left(\delta_\gamma,\delta_c,\theta_{\gamma b},\theta_c,\Phi,
+\delta_\nu,\theta_\nu\right).
 ```
 
 During tight coupling,
@@ -80,6 +87,14 @@ The equations are
 \theta_c' = -\mathcal H\theta_c+k^2\Phi,
 ```
 
+```math
+\delta_\nu' = -{4\over3}\theta_\nu+4\Phi',
+```
+
+```math
+\theta_\nu' = k^2\Phi+{1\over4}k^2\delta_\nu,
+```
+
 with
 
 ```math
@@ -98,8 +113,9 @@ where
 
 ```math
 \delta_{\rm tot}
-={\rho_\gamma\delta_\gamma+\rho_b\delta_b+\rho_c\delta_c\over
-\rho_\gamma+\rho_b+\rho_c+\rho_\Lambda}.
+={\rho_\gamma\delta_\gamma+\rho_\nu\delta_\nu+
+\rho_b\delta_b+\rho_c\delta_c\over
+\rho_\gamma+\rho_\nu+\rho_b+\rho_c+\rho_\Lambda}.
 ```
 
 Implementation: see `rhs`, `initial_conditions`, and `integrate_source`.
@@ -117,6 +133,11 @@ The default superhorizon radiation-era initial conditions are
 ```math
 \theta_{\gamma b,i}=\theta_{c,i}
 ={1\over2} k^2\eta_i\Phi_i .
+```
+
+```math
+\delta_{\nu,i}=\delta_{\gamma,i},\qquad
+\theta_{\nu,i}=\theta_{\gamma b,i}.
 ```
 
 Here `Phi_i = -2/3` is chosen so that, on superhorizon scales during radiation

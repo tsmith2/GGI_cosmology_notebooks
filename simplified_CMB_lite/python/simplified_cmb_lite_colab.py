@@ -3,11 +3,12 @@
 
 Model parameter vector:
 
-    theta = [A_s, omega_cdm, omega_b, H0, n_s]
+    theta = [A_s, omega_cdm, omega_b, H0, n_s, Delta_N_eff]
 
 where H0 is in km/s/Mpc, and omega_cdm and omega_b are the usual physical
-density parameters.  The likelihood functions also accept ell_min and ell_max, with
-defaults ell_min=2 and ell_max=2500.
+density parameters. Delta_N_eff is the deviation from the default N_eff=3.
+The likelihood functions also accept ell_min and ell_max, with defaults
+ell_min=2 and ell_max=2500.
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ CPP_DIR = PACKAGE_DIR / "cpp"
 EXE = CPP_DIR / "two_fluid_tt"
 CACHE_DIR = PACKAGE_DIR / ".cache"
 FIGURE_DIR = PACKAGE_DIR / "figures"
-MOCK_DATA_FILE = PACKAGE_DIR / "data" / "mock_tt_planck_like_lite.npz"
+MOCK_DATA_FILE = PACKAGE_DIR / "data" / "mock_tt_planck_like_lite_neutrino.npz"
 BINNING_FILE = PACKAGE_DIR / "data" / "planck_tt_binning_lmax2500.npz"
 BESSEL_X_CACHE = CACHE_DIR / "lite_bessel_x_l2500_dx0p1_x15000.bin"
 
@@ -45,9 +46,10 @@ PARAM_NAMES = [
     r"$\omega_b$",
     r"$H_0$",
     r"$n_s$",
+    r"$\Delta N_{\rm eff}$",
 ]
 
-FID_THETA = np.array([2.1e-9, 0.1201, 0.0223, 67.0, 0.965], dtype=float)
+FID_THETA = np.array([2.1e-9, 0.1201, 0.0223, 67.0, 0.965, 0.0], dtype=float)
 LCDM_BOUNDS = np.array(
     [
         [1.0e-9, 3.5e-9],
@@ -55,6 +57,7 @@ LCDM_BOUNDS = np.array(
         [0.017, 0.028],
         [55.0, 80.0],
         [0.85, 1.08],
+        [-2.9, 5.0],
     ],
     dtype=float,
 )
@@ -80,12 +83,14 @@ def _validate_theta(theta: np.ndarray) -> np.ndarray:
     """Return theta as a float array after checking the H0 convention."""
     theta = np.asarray(theta, dtype=float)
     if theta.shape != (len(FID_THETA),):
-        raise ValueError("theta must have five entries")
+        raise ValueError("theta must have six entries")
     if not np.isfinite(theta[3]) or theta[3] < 10.0:
         raise ValueError(
             "theta[3] must be H0 in km/s/Mpc, for example 67.0. "
             "Do not pass 0.67 here."
         )
+    if 3.0 + theta[5] < 0.0:
+        raise ValueError("N_eff = 3 + Delta_N_eff must be non-negative")
     return theta.copy()
 
 
@@ -186,6 +191,7 @@ class TwoFluidCPPServer:
         omega_b: float,
         H0: float,
         n_s: float,
+        Delta_N_eff: float,
     ) -> TTSpectrum:
         """Return the dense TT spectrum in microkelvin squared."""
         if self.process.poll() is not None:
@@ -194,7 +200,8 @@ class TwoFluidCPPServer:
         assert self.process.stdout is not None
 
         line = " ".join(
-            f"{float(x):.17g}" for x in [A_s, omega_cdm, omega_b, H0, n_s]
+            f"{float(x):.17g}"
+            for x in [A_s, omega_cdm, omega_b, H0, n_s, Delta_N_eff]
         )
         self.process.stdin.write(line + "\n")
         self.process.stdin.flush()
@@ -319,13 +326,14 @@ def _full_tt_spectrum(
     *,
     ell_max: int = ELL_MAX,
 ) -> TTSpectrum:
-    A_s, omega_cdm, omega_b, H0, n_s = map(float, _validate_theta(theta))
+    A_s, omega_cdm, omega_b, H0, n_s, Delta_N_eff = map(float, _validate_theta(theta))
     return get_server(ell_max=ell_max).tt_spectrum(
         A_s=A_s,
         omega_cdm=omega_cdm,
         omega_b=omega_b,
         H0=H0,
         n_s=n_s,
+        Delta_N_eff=Delta_N_eff,
     )
 
 
