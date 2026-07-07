@@ -3,18 +3,17 @@
 
 Model parameter vector:
 
-    theta = [log10(10^9 A_s), omega_cdm, omega_b, h, n_s]
+    theta = [log10(10^9 A_s), omega_cdm, omega_b, H0, n_s]
 
-where omega_cdm and omega_b are physical densities, Omega_i h^2.
-The likelihood functions also accept ell_min and ell_max, with defaults
-ell_min=2 and ell_max=2500.
+where H0 is in km/s/Mpc, and omega_cdm and omega_b are physical densities,
+Omega_i h^2.  The likelihood functions also accept ell_min and ell_max, with
+defaults ell_min=2 and ell_max=2500.
 """
 
 from __future__ import annotations
 
 import atexit
 import os
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,17 +43,17 @@ PARAM_NAMES = [
     r"$\log_{10}(10^9 A_s)$",
     r"$\omega_{\rm cdm}$",
     r"$\omega_b$",
-    r"$h$",
+    r"$H_0$",
     r"$n_s$",
 ]
 
-FID_THETA = np.array([np.log10(2.1), 0.1201, 0.0223, 0.67, 0.965], dtype=float)
+FID_THETA = np.array([np.log10(2.1), 0.1201, 0.0223, 67.0, 0.965], dtype=float)
 LCDM_BOUNDS = np.array(
     [
         [-0.2, 0.8],
         [0.09, 0.16],
         [0.017, 0.028],
-        [0.55, 0.80],
+        [55.0, 80.0],
         [0.85, 1.08],
     ],
     dtype=float,
@@ -80,6 +79,16 @@ class TTSpectrum:
 def As_from_log10_1e9_As(log10_1e9_As: float) -> float:
     """Convert log10(10^9 A_s) into A_s."""
     return 10.0 ** float(log10_1e9_As) * 1.0e-9
+
+
+def _theta_with_cpp_h(theta: np.ndarray) -> np.ndarray:
+    """Return a copy of theta with H0 converted to h for the C++ executable."""
+    theta = np.asarray(theta, dtype=float)
+    if theta.shape != (len(FID_THETA),):
+        raise ValueError("theta must have five entries")
+    out = theta.copy()
+    out[3] = out[3] / 100.0
+    return out
 
 
 def ensure_cpp_executable(*, force_rebuild: bool = False) -> None:
@@ -307,8 +316,12 @@ def log_prior_lcdm(theta: np.ndarray) -> float:
     return 0.0
 
 
-def _full_tt_spectrum(theta: np.ndarray, *, ell_max: int = ELL_MAX) -> TTSpectrum:
-    log_as, omega_cdm, omega_b, h, n_s = map(float, theta)
+def _full_tt_spectrum(
+    theta: np.ndarray,
+    *,
+    ell_max: int = ELL_MAX,
+) -> TTSpectrum:
+    log_as, omega_cdm, omega_b, h, n_s = map(float, _theta_with_cpp_h(theta))
     return get_server(ell_max=ell_max).tt_spectrum(
         A_s=As_from_log10_1e9_As(log_as),
         omega_cdm=omega_cdm,
@@ -401,7 +414,9 @@ def log_likelihood(
     if not np.isfinite(log_prior_lcdm(theta)):
         return -np.inf
     _ell, obs, sigma = _data_vector(data, ell_min=ell_min, ell_max=ell_max)
-    _model_ell, model = model_data_vector(theta, data, ell_min=ell_min, ell_max=ell_max)
+    _model_ell, model = model_data_vector(
+        theta, data, ell_min=ell_min, ell_max=ell_max
+    )
     if np.any(~np.isfinite(model)) or np.any(sigma <= 0.0):
         return -np.inf
     resid = (obs - model) / sigma
@@ -416,7 +431,9 @@ def negative_log_likelihood(
     ell_max: int = ELL_MAX,
 ) -> float:
     """Return -log likelihood for optimizers, scans, or MCMC drivers."""
-    ll = log_likelihood(theta, data, ell_min=ell_min, ell_max=ell_max)
+    ll = log_likelihood(
+        theta, data, ell_min=ell_min, ell_max=ell_max
+    )
     if not np.isfinite(ll):
         return np.inf
     return -ll
@@ -544,7 +561,9 @@ def plot_mock_data_with_residuals(
     ax.grid(alpha=0.25)
     ax.legend(frameon=False)
 
-    _ell_model, model = model_data_vector(theta, data, ell_min=ell_min, ell_max=ell_max)
+    _ell_model, model = model_data_vector(
+        theta, data, ell_min=ell_min, ell_max=ell_max
+    )
     _ell_data, obs, sigma = _data_vector(data, ell_min=ell_min, ell_max=ell_max)
     cv_sigma = np.concatenate(
         [

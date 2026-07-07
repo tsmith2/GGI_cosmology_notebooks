@@ -98,8 +98,11 @@ negative_log_likelihood(theta, data=None, ell_min=2, ell_max=2500)
 where:
 
 ```python
-theta = [log10(10^9 A_s), omega_cdm, omega_b, h, n_s]
+theta = [log10(10^9 A_s), omega_cdm, omega_b, H0, n_s]
 ```
+
+Here `H0` is in km/s/Mpc.  The C++ solver internally uses `h = H0/100`, but
+students only need to pass `H0` to the Python wrapper.
 
 The Colab notebook is:
 
